@@ -13,10 +13,12 @@
 - [简介](#简介)
 - [支持的硬件型号](#支持的硬件型号)
 - [用户指南](#用户指南)
+- [源码编译](#源码编译)
 - [资源链接](#资源链接)
 - [安全声明](#安全声明)
 - [免责声明](#免责声明)
 - [许可证](#许可证)
+- [致谢](#致谢)
 
 ---
 
@@ -40,7 +42,58 @@ PyTorch-for-SAIL 基于社区开源 PyTorch 项目开发，面向真武 PPU 硬�
 
 ## 用户指南
 
-请参考 PyTorch-for-SAIL 用户指南。
+如需直接通过 Docker 使用 PyTorch-for-SAIL 或从 PyPI 安装，请参阅 [PyTorch-for-SAIL 用户指南](https://www.flytiger-eco.com/docs_center/doc_detail/index.html?projectId=6&documentId=99)。
+
+---
+
+## 源码编译
+
+如需从源码编译并安装，请确保在 [PyTorch-for-SAIL Docker 镜像](https://www.flytiger-eco.com/download?businessType=DOCKER)内进行编译。
+
+```bash
+# 1. 下载 PyTorch 源码并初始化子模块
+git clone --recursive https://github.com/flytiger-eco/pytorch-for-sail.git -b v2.10.0
+cd pytorch-for-sail
+
+# 如果 clone 时未使用 --recursive，或子模块拉取不完整，请执行：
+git submodule sync
+git submodule update --init --recursive
+
+# 以下命令需在 PyTorch-for-SAIL Docker 容器内执行
+# 2. 配置编译环境
+source /usr/local/PPU_SDK/envsetup.sh
+
+# 安装编译依赖
+pip install -r requirements.txt
+
+# 可选：取消以下变量的注释，以输出用于排查问题的详细编译日志
+# export CUDA_VERBOSE_BUILD=1      # 打印编译 CUDA 源文件的完整命令行
+# export CMAKE_VERBOSE_MAKEFILE=1  # 打印 CMake 生成的每条编译和链接命令
+
+# PPU 工具链特有行为：8.0 会启用 SM80 和 SM89 混合编译。
+# 在标准 CUDA 语义中，8.0 通常仅表示 SM80。
+export TORCH_CUDA_ARCH_LIST="8.0"
+# 如需仅编译 SM89，请注释上一行并取消下一行的注释。
+# export TORCH_CUDA_ARCH_LIST="8.9"
+
+# 3. 编译生成 wheel 安装包
+NCCL_INCLUDE_DIR=/usr/local/PPU_SDK/CUDA_SDK/include \
+NCCL_LIB_DIR=/usr/local/PPU_SDK/CUDA_SDK/lib64 \
+PYTORCH_VERSION=2.10.0 \
+PYTORCH_BUILD_VERSION=2.10.0 \
+PYTORCH_BUILD_NUMBER=0 \
+USE_FLASH_ATTENTION=True \
+USE_MEM_EFF_ATTENTION=True \
+USE_NCCL=True \
+USE_DISTRIBUTED=True \
+USE_SYSTEM_NCCL=1 \
+BUILD_CAFFE2=False \
+BUILD_TEST=True \
+python3 setup.py bdist_wheel
+
+# 4. 安装编译生成的 wheel 包
+pip install dist/*.whl
+```
 
 ---
 
