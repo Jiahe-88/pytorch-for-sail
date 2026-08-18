@@ -50,3 +50,11 @@ def freeze_rng_state():
             if torch.cuda.is_available():
                 torch.cuda.set_rng_state(cuda_rng_state)  # type: ignore[possibly-undefined]
             torch.set_rng_state(rng_state)
+
+
+def is_ppu() -> bool:
+    import os
+
+    if "PPU_SDK" in os.environ.keys():
+        return True
+    return False

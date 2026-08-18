@@ -247,7 +247,7 @@ else()
 endif()
 
 option(USE_CUDA "Use CUDA" ON)
-
+option(USE_PPU "Build for PPU" ON)
 option(USE_XPU "Use XPU" ON)
 cmake_dependent_option(
   BUILD_LAZY_CUDA_LINALG "Build cuda linalg ops as separate library" ON
@@ -399,6 +399,12 @@ endif()
 cmake_dependent_option(USE_PRIORITIZED_TEXT_FOR_LD "Use prioritized text linker for ld."
   "${USE_PRIORITIZED_TEXT_DEFAULT}" "CPU_INTEL OR CPU_AARCH64 OR CPU_POWER" OFF)
 
+if(USE_PPU)
+  add_definitions(-DUSE_PPU)
+  add_definitions(-DUSE_HGGC)
+  add_definitions(-DHAS_PYTORCH)
+  add_definitions(-DUSE_PYTORCH_SDPA)
+endif()
 option(USE_MIMALLOC "Use mimalloc" OFF)
 # Enable third party mimalloc library to improve memory allocation performance
 # on Windows and AArch64.
@@ -1091,10 +1097,12 @@ endif()
 if(NOT MSVC)
   string(APPEND CMAKE_CXX_FLAGS " -O2 -fPIC")
 
-  # This prevents use of `c10::optional`, `c10::nullopt` etc within the codebase
-  string(APPEND CMAKE_CXX_FLAGS " -DC10_NODEPRECATED")
-  string(APPEND CMAKE_CUDA_FLAGS " -DC10_NODEPRECATED")
-  string(APPEND CMAKE_OBJCXX_FLAGS " -DC10_NODEPRECATED")
+  if(NOT USE_PPU)
+    # This prevents use of `c10::optional`, `c10::nullopt` etc within the codebase
+    string(APPEND CMAKE_CXX_FLAGS " -DC10_NODEPRECATED")
+    string(APPEND CMAKE_CUDA_FLAGS " -DC10_NODEPRECATED")
+    string(APPEND CMAKE_OBJCXX_FLAGS " -DC10_NODEPRECATED")
+  endif()
 
   # Eigen fails to build with some versions, so convert this to a warning
   # Details at http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1459

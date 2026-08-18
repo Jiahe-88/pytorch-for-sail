@@ -22,6 +22,8 @@
 
 #include <limits>
 #include <utility>
+#include <iostream>
+#include <string>
 
 #ifndef AT_PER_OPERATOR_HEADERS
 #include <ATen/Functions.h>
@@ -500,7 +502,79 @@ int64_t _fused_sdp_choice_meta(
   return static_cast<int64_t>(sdp::SDPBackend::math);
 }
 namespace {
+inline std::string print_tensor_info(const Tensor& t, std::string msg)
+{
+    std::vector<int64_t> shape(t.sizes().begin(), t.sizes().end());
 
+    // std::cout << msg << " shape:[";
+    std::string partial_msg = msg + " shape:[";
+    for (int i = 0; i < shape.size(); i++) {
+        // std::cout << shape[i];
+        partial_msg += std::to_string(shape[i]);
+        if (i != shape.size() - 1) {
+            // std::cout << ",";
+            partial_msg += ",";
+        }
+    }
+    // std::cout << "]";
+    // std::cout << " stride:[";
+    partial_msg += "]";
+    partial_msg += " stride:[";
+
+    for (int i = 0; i < shape.size(); i++) {
+        // std::cout << t.stride(i);
+        partial_msg += std::to_string(t.stride(i));
+        if (i != shape.size() - 1) {
+            // std::cout << ",";
+            partial_msg += ",";
+        }
+    }
+    // std::cout << "], dtype:" << t.dtype() << ", requires_grad:" << t.requires_grad() << ", ";
+    std::string requires_grad_str = t.requires_grad() ? "1" : "0";
+    std::string dtype_str = str(t.dtype().name());
+    partial_msg += "], dtype:" + dtype_str + ", requires_grad:" + requires_grad_str + ", ";
+    return partial_msg;
+}
+
+inline void print_sdpa_params(
+    const Tensor& query_,
+    const Tensor& key,
+    const Tensor& value,
+    const std::optional<Tensor>& attn_mask_,
+    double dropout_p,
+    bool is_causal,
+    std::optional<double> scale) {
+  // print sdpa params
+  char *pEnv_perf = std::getenv("PPU_SDPA_PRINT_PARAMS");
+  if (pEnv_perf) {
+      std::string sdpa_params = "SDPA params: ";
+      // std::cout << "SDPA params: ";
+      if (!query_.is_nested())
+          sdpa_params += print_tensor_info(query_, "Q:");
+      else
+          // std::cout << "Q is nested tensor. " << std::endl;
+          sdpa_params += "Q is nested tensor. ";
+      if (!key.is_nested())
+          sdpa_params += print_tensor_info(key, "K:");
+      else
+          // std::cout << "K is nested tensor. " << std::endl;
+          sdpa_params += "K is nested tensor. ";
+      if (!value.is_nested())
+          sdpa_params += print_tensor_info(value, "V:");
+      else
+          // std::cout << "V is nested tensor. " << std::endl;
+          sdpa_params += "V is nested tensor. ";
+      if (attn_mask_.has_value())
+          sdpa_params += print_tensor_info(attn_mask_.value(), "attn_mask:");
+      else
+          // std::cout << "attn_mask:0";
+          sdpa_params += "attn_mask:0";
+      sdpa_params += ", dropout:" + std::to_string(dropout_p) + ", is_causal:" + std::to_string(is_causal) + ", scale:" + std::to_string(scale.has_value());
+      // std::cout << ", dropout:" << dropout_p << ", is_causal:" << is_causal << ", scale:" << scale.has_value() << std::endl;
+      std::cout << sdpa_params << std::endl;
+
+  }
+}
 inline void validate_sdpa_input(
     const Tensor& query_,
     const Tensor& key,
@@ -509,6 +583,7 @@ inline void validate_sdpa_input(
     double dropout_p,
     bool is_causal,
     std::optional<double> scale) {
+  print_sdpa_params(query_, key, value, attn_mask_, dropout_p, is_causal, scale);
   TORCH_CHECK(
       query_.dtype() == key.dtype() && query_.dtype() == value.dtype(),
       "Expected query, key, and value to have the same dtype, but got query.dtype: ",
@@ -737,12 +812,16 @@ Tensor scaled_dot_product_attention(
   auto attn_mask = convert_attn_func(attn_mask_, query_.dtype());
   switch (backend) {
     case SDPBackend::cudnn_attention: {
+      if (std::getenv("PPU_SDPA_PRINT_PARAMS"))
+        std::cout << "SDPA backend: cudnn_attention" << std::endl;
       bool compute_logsumexp = should_compute_logsumexp(query_, key, value);
       auto out_lse_softmax = at::_scaled_dot_product_cudnn_attention(
           query_, key, value, attn_mask, compute_logsumexp, dropout_p, is_causal, false /*return_debug_mask*/, scale);
       return std::get<0>(out_lse_softmax);
     }
     case SDPBackend::flash_attention: {
+      if (std::getenv("PPU_SDPA_PRINT_PARAMS"))
+        std::cout << "SDPA backend: flash_attention" << std::endl;
       if(query_device_type == DeviceType::CUDA ||
          query_device_type == DeviceType::XPU) {
         c10::SymInt og_size = query_.sym_size(-1);
@@ -761,6 +840,8 @@ Tensor scaled_dot_product_attention(
           query_, key, value, dropout_p, is_causal, attn_mask, scale));
     }
     case SDPBackend::efficient_attention: {
+      if (std::getenv("PPU_SDPA_PRINT_PARAMS"))
+        std::cout << "SDPA backend: efficient_attention" << std::endl;
       bool compute_logsumexp = should_compute_logsumexp(query_, key, value);
       if (attn_mask.has_value()) {
         attn_mask.value() = preprocess_mask(attn_mask.value(), query_, key, value);;

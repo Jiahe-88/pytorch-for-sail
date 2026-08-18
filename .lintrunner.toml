@@ -30,6 +30,7 @@ exclude_patterns = [
     '**/*.pyi',
     "tools/experimental/torchfuzz/**",
     'tools/test/test_selective_build.py',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**'
 ]
 command = [
     'uv',
@@ -287,6 +288,8 @@ exclude_patterns = [
     'fb/**',
     '**/fb/**',
     'test/test_jit.py',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+    'third_party/cutlass2/**',
 ]
 command = [
     'python3',
@@ -328,7 +331,9 @@ include_patterns = ['**/*.py', '**/*.pyi']
 exclude_patterns = [
     'caffe2/**',
     'fb/**',
-    '**/fb/**'
+    '**/fb/**',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+    'third_party/cutlass2/**',
     ]
 command = [
     'python3',
@@ -410,6 +415,8 @@ exclude_patterns = [
     '**/fb/**',
     'test/cpp/jit/upgrader_models/*.ptl',
     'test/cpp/jit/upgrader_models/*.ptl.ff',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+    'third_party/cutlass2/**',
 ]
 command = [
     'python3',
@@ -520,6 +527,8 @@ exclude_patterns = [
     '**/fb/**',
     'torch/csrc/jit/serialization/mobile_bytecode_generated.h',
     'torch/csrc/utils/pythoncapi_compat.h',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+    'third_party/cutlass2/**',
 ]
 command = [
     'python3',
@@ -678,6 +687,7 @@ exclude_patterns = [
     '**/gradlew',
     'fb/**',
     '**/fb/**',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
 ]
 command = [
     'python3',
@@ -782,6 +792,8 @@ exclude_patterns = [
     'caffe2/**',
     'fb/**',
     '**/fb/**',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+    'third_party/cutlass2/**',
 ]
 command = [
     'python3',
@@ -834,6 +846,8 @@ exclude_patterns = [
     'cmake/cmake_uninstall.cmake.i',
     'fb/**',
     '**/fb/**',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+    'third_party/cutlass2/**',
 ]
 command = [
     'uv',
@@ -1109,6 +1123,19 @@ exclude_patterns = [
     'torch/_inductor/fx_passes/serialized_patterns/**',
     'torch/_inductor/autoheuristic/artifacts/**',
     'torch/utils/model_dump/preact.mjs',
+    # These files are all grandfathered in, feel free to remove from this list
+    # as necessary
+    # NOTE: remove the patterns in the order they are listed
+    'aten/src/ATen/native/[a-pA-P]*/**',
+    'aten/src/ATen/[a-mA-M]*/**',
+    'test/**',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
+]
+init_command = [
+    'python3',
+    'tools/linter/adapters/pip_init.py',
+    '--dry-run={{DRYRUN}}',
+    'codespell[toml]==2.4.1',
 ]
 is_formatter = true
 
@@ -1386,6 +1413,7 @@ exclude_patterns = [
     'torch/utils/throughput_benchmark.py',
     'torch/utils/viz/__init__.py',
     'torch/utils/viz/_cycles.py',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
 ]
 is_formatter = true
 
@@ -1497,6 +1525,7 @@ exclude_patterns = [
     'third_party/**',
     'fb/**',
     '**/fb/**',
+    'aten/src/ATen/native/transformers/cuda/ppu/xformers/**',
 ]
 command = [
     'uv',
