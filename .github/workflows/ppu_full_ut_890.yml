@@ -2,6 +2,7 @@ name: ppu-full-ut-890
 
 on:
   workflow_dispatch:
+  # 北京时间每周六 06:00（UTC 周五 22:00）触发一次
   schedule:
     - cron: "0 22 * * 5"
 concurrency:
@@ -27,7 +28,6 @@ jobs:
     uses: ./.github/workflows/_ppu_build.yml
     with:
       board: "890"
-      cache-branch: v2.11.0
       upload-wheel: true
 
   ut-shard-1:
